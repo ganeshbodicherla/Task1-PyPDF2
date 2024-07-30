@@ -1,0 +1,40 @@
+import pdfplumber
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+def extract_text_from_pdf(pdf_path):
+    text = ""
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text()
+    return text
+
+def extract_features(texts):
+    vectorizer = TfidfVectorizer(stop_words='english')
+    features = vectorizer.fit_transform(texts)
+    return features, vectorizer
+
+def calculate_similarity(feature_matrix):
+    return cosine_similarity(feature_matrix)
+
+def find_most_similar_invoice(input_invoice_path, database_paths):
+    input_text = extract_text_from_pdf(input_invoice_path)
+    
+    database_texts = [extract_text_from_pdf(path) for path in database_paths]
+    all_texts = [input_text] + database_texts
+    
+    features, _ = extract_features(all_texts)
+    similarity_matrix = calculate_similarity(features)
+    
+    similarities = similarity_matrix[0, 1:]
+    most_similar_index = similarities.argmax()
+    
+    return database_paths[most_similar_index], similarities[most_similar_index]
+
+# Example usage
+input_invoice_path = 'path/to/input_invoice.pdf'
+database_paths = ['path/to/invoice1.pdf', 'path/to/invoice2.pdf', 'path/to/invoice3.pdf']
+most_similar_invoice, similarity_score = find_most_similar_invoice(input_invoice_path, database_paths)
+
+print(f"Most similar invoice: {most_similar_invoice}")
+print(f"Similarity score: {similarity_score}")
